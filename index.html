@@ -104,11 +104,11 @@ a { color: var(--s1); }
 <p class="answer" id="a3"></p>
 <div class="map-wrap" id="scatterWrap"></div>
 
-<h2>4. Roste tepelný ostrov Prahy?</h2>
+<h2>4. Jak silný je tepelný ostrov Prahy?</h2>
 <p class="answer" id="a4"></p>
 <div class="map-wrap" id="pragueWrap"></div>
 <div class="legend" id="pragueLegend"></div>
-<p><small>Rozdíl průměrné noční (minimální) teploty za rok: Klementinum (centrum) minus stanice za městem. Výšku stanic rozdíl neovlivňuje v čase, jen posouvá úroveň (Ondřejov leží o ~300 m výš). Mezera 2005–2010 = chybějící data Klementina.</small></p>
+<p><small>Rozdíl průměrné noční (minimální) teploty za rok: Klementinum (centrum, 191 m n. m.) minus stanice za městem. Jestli ostrov v čase sílí, z dat spolehlivě říct nejde: Klementinu chybí roky 2005–2010 a po mezeře je rozdíl u všech stanic skokově vyšší.</small></p>
 
 <h2>Data</h2>
 <ul>
@@ -335,18 +335,13 @@ function renderText() {
     `Slabě. Spojuje je přízemní ozon, který vzniká v horku. V letech s teplejším létem bylo v dané zemi víc dnů s vysokým ozonem, ale vazba je slabá: <b>r = ${fmt(air.ozone_heat.r, 2)}</b> ` +
     `(~${fmt(slope * 10, 0)} ozonové dny navíc na 10 letních dnů navíc). Ozon celkově neroste, pravděpodobně proto, že ubývá látek, ze kterých vzniká (NOx). ` +
     `<small>Bod = jedna země v jednom roce (2013–2025); od obou hodnot je odečten průměr dané země.</small>`;
-  const t = praha.trend, df = praha.diff, tr = praha.tr;
-  const refs = Object.keys(df);
-  const rng = (f, d) => { const v = refs.map(f); return `${fmt(Math.min(...v), d)}–${fmt(Math.max(...v), d)}`; };
-  const sig = n => Math.abs(df[n].trend_pre[0]) > 2 * df[n].trend_pre[1];
-  const yes = refs.filter(sig), no = refs.filter(n => !sig(n));
-  const DAT = { "Ruzyně": "Ruzyni", "Brandýs n. L.": "Brandýsu", "Ondřejov": "Ondřejovu" };
+  const df = praha.diff, tr = praha.tr, el = praha.elev;
+  const B = "Brandýs n. L.";
   document.getElementById("a4").innerHTML =
-    `Možná, ale data to neprokazují jednoznačně. Noční teploty v centru (Klementinum) rostou o ${fmt(t.Klementinum[0], 2)} °C za desetiletí, za městem o ${rng(n => t[n][0], 2)} °C. ` +
-    `V letech 1951–2004 se rozdíl spolehlivě zvětšoval jen oproti ${yes.map(n => DAT[n]).join(", ")} (${yes.map(n => sign(df[n].trend_pre[0], 2)).join(", ")} °C za desetiletí)` +
-    (no.length ? `; oproti ${no.map(n => DAT[n]).join(" a ")} se neměnil. ` : ". ") +
-    `Po mezeře v datech Klementina (2005–2010) je rozdíl u všech stanic skokově vyšší (o ${rng(n => df[n].step, 2)} °C). Může to být skutečná změna, ale i změna měření; z těchto dat to nejde rozlišit. ` +
-    `Jasný je rozdíl v úrovni: v Klementinu je dnes ${fmt(tr.Klementinum[1], 0)} tropických nocí za léto, za městem ${rng(n => tr[n][1], 0)}.`;
+    `Noci v centru jsou zhruba o <b>${fmt(df[B].late, 1)} °C teplejší</b> než za městem. ` +
+    `Tolik je rozdíl proti Brandýsu nad Labem, který leží ve stejné výšce jako Klementinum (${el[B]} vs. ${el.Klementinum} m n. m.), v letech 2011–2025; v letech 1961–1990 to bylo ${fmt(df[B].early, 1)} °C. ` +
+    `Proti Ruzyni a Ondřejovu je rozdíl ${fmt(df["Ruzyně"].late, 1)} a ${fmt(df["Ondřejov"].late, 1)} °C, ale část z toho dělá jejich vyšší poloha (${el["Ruzyně"]} a ${el["Ondřejov"]} m). ` +
+    `Důsledek: Klementinum má <b>${fmt(tr.Klementinum[1], 0)} tropických nocí</b> za léto, Brandýs ${fmt(tr[B][1], 0)}, Ruzyně ${fmt(tr["Ruzyně"][1], 0)}.`;
 }
 
 function renderPrague() {

@@ -269,7 +269,7 @@ if os.path.isdir(f"{ECAD}/TN"):
     tn = {name: load_index("TN", sid, 2) for name, sid in PRAGUE.items()}  # sloupec 2 = celý rok
     tr = {name: load_index("TR", sid, 4) for name, sid in PRAGUE.items()}  # sloupec 4 = letní pololetí
     k = tn["Klementinum"]
-    prague = {"years": list(PY), "tn": {n: [r1(d.get(y), 2) for y in PY] for n, d in tn.items()},
+    prague = {"years": list(PY), "elev": {n: stations[sid]["elev"] for n, sid in PRAGUE.items() if sid in stations}, "tn": {n: [r1(d.get(y), 2) for y in PY] for n, d in tn.items()},
               "diff": {}, "trend": {}, "tr": {}}
     for name in PRAGUE:
         b, se = ols_se([(y, v) for y, v in tn[name].items() if y in PY])
@@ -285,6 +285,6 @@ if os.path.isdir(f"{ECAD}/TN"):
                                 "trend_pre": [r1(bp * 10, 3), r1(sep * 10, 3)],
                                 "step": r1(mean([v for y, v in diff if y >= 2011]) - mean([v for y, v in diff if 1995 <= y <= 2004]), 2),
                                 "n": len(diff), "early": r1(mean([v for y, v in diff if y in BASE]), 2),
-                                "late": r1(mean([v for y, v in diff if 1996 <= y <= 2025]), 2)}
+                                "late": r1(mean([v for y, v in diff if y in RECENT]), 2)}
     json.dump(prague, open(f"{OUT}/praha.json", "w"), ensure_ascii=False, separators=(",", ":"))
     print("praha:", {n: d["trend"] for n, d in prague["diff"].items()}, file=sys.stderr)

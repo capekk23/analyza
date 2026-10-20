@@ -7,7 +7,7 @@
 1. Přibývá horkých dnů? (ECA&D, meteostanice v EU, 1950–2025)
 2. Zlepšuje se vzduch? (EEA, stanice kvality ovzduší v EU, 2013–2025)
 3. Souvisí to spolu? (ozon × letní dny)
-4. Roste tepelný ostrov Prahy? (ECA&D, Klementinum vs. Ruzyně, Brandýs, Ondřejov)
+4. Jak silný je tepelný ostrov Prahy? (ECA&D, Klementinum vs. Ruzyně, Brandýs, Ondřejov)
 
 ```
 index.html        stránka (D3 z CDN, žádný build)
