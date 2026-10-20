@@ -242,3 +242,49 @@ with open(f"{OUT}/zeme.csv", "w", newline="", encoding="utf-8") as fh:
             return [n, e, l, r1((l - e) / e * 100) if e else ""]
         w.writerow([NAMES.get(h["cc"], h["cc"]), h["cc"], h["n"],
                     *h.get("SU", ["", ""]), *h.get("TR", ["", ""]), *pol("NO2"), *pol("PM2.5")])
+
+# ---------------------------------------------------------------- tepelný ostrov Prahy
+# Průměr denních minim (index TN, celý rok) v centru (Klementinum) vs. tři stanice za městem.
+# Potřebuje rozbalený ECA_indexTN.zip v <ecad_dir>/TN/.
+PRAGUE = {"Klementinum": 27, "Ruzyně": 3563, "Brandýs n. L.": 11194, "Ondřejov": 11198}
+PY = range(1951, 2026)
+
+def load_index(idx, staid, col):
+    d = {}
+    path = f"{ECAD}/{idx}/index{idx}_{staid:06d}.txt"
+    for line in open(path, encoding="latin-1"):
+        f = line.split()
+        if len(f) > col and f[0].isdigit() and f[1].isdigit() and f[col] != "-999999":
+            d[int(f[1])] = int(f[col]) * 0.01
+    return d
+
+def ols_se(pairs):
+    n = len(pairs); mx = sum(p[0] for p in pairs) / n; my = sum(p[1] for p in pairs) / n
+    sxx = sum((p[0] - mx) ** 2 for p in pairs)
+    b = sum((p[0] - mx) * (p[1] - my) for p in pairs) / sxx
+    res = sum((p[1] - my - b * (p[0] - mx)) ** 2 for p in pairs)
+    return b, math.sqrt(res / (n - 2) / sxx)
+
+if os.path.isdir(f"{ECAD}/TN"):
+    tn = {name: load_index("TN", sid, 2) for name, sid in PRAGUE.items()}  # sloupec 2 = celý rok
+    tr = {name: load_index("TR", sid, 4) for name, sid in PRAGUE.items()}  # sloupec 4 = letní pololetí
+    k = tn["Klementinum"]
+    prague = {"years": list(PY), "tn": {n: [r1(d.get(y), 2) for y in PY] for n, d in tn.items()},
+              "diff": {}, "trend": {}, "tr": {}}
+    for name in PRAGUE:
+        b, se = ols_se([(y, v) for y, v in tn[name].items() if y in PY])
+        prague["trend"][name] = [r1(b * 10, 3), r1(se * 10, 3)]  # °C za desetiletí
+        prague["tr"][name] = [r1(mean([tr[name].get(y) for y in BASE])), r1(mean([tr[name].get(y) for y in RECENT]))]
+        if name == "Klementinum":
+            continue
+        diff = [(y, k[y] - tn[name][y]) for y in PY if y in k and y in tn[name]]
+        b, se = ols_se(diff)
+        # Klementinum nemá data 2005–2010 a po mezeře je rozdíl skokově vyšší → trend zvlášť do roku 2004
+        bp, sep = ols_se([d for d in diff if d[0] <= 2004])
+        prague["diff"][name] = {"values": [r1(dict(diff).get(y), 2) for y in PY], "trend": [r1(b * 10, 3), r1(se * 10, 3)],
+                                "trend_pre": [r1(bp * 10, 3), r1(sep * 10, 3)],
+                                "step": r1(mean([v for y, v in diff if y >= 2011]) - mean([v for y, v in diff if 1995 <= y <= 2004]), 2),
+                                "n": len(diff), "early": r1(mean([v for y, v in diff if y in BASE]), 2),
+                                "late": r1(mean([v for y, v in diff if 1996 <= y <= 2025]), 2)}
+    json.dump(prague, open(f"{OUT}/praha.json", "w"), ensure_ascii=False, separators=(",", ":"))
+    print("praha:", {n: d["trend"] for n, d in prague["diff"].items()}, file=sys.stderr)

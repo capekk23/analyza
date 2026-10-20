@@ -104,11 +104,18 @@ a { color: var(--s1); }
 <p class="answer" id="a3"></p>
 <div class="map-wrap" id="scatterWrap"></div>
 
+<h2>4. Roste tepelný ostrov Prahy?</h2>
+<p class="answer" id="a4"></p>
+<div class="map-wrap" id="pragueWrap"></div>
+<div class="legend" id="pragueLegend"></div>
+<p><small>Rozdíl průměrné noční (minimální) teploty za rok: Klementinum (centrum) minus stanice za městem. Výšku stanic rozdíl neovlivňuje v čase, jen posouvá úroveň (Ondřejov leží o ~300 m výš). Mezera 2005–2010 = chybějící data Klementina.</small></p>
+
 <h2>Data</h2>
 <ul>
   <li><a href="data/zeme.csv" download>zeme.csv</a>: výsledky po zemích (mediány stanic)</li>
   <li><a href="https://www.ecad.eu/">ECA&amp;D</a>: indexy SU a TR za letní pololetí; stanice s ≥ 25 roky dat v 1961–1990 a ≥ 12 v 2011–2025. Klein Tank et al. (2002), Int. J. Climatol. 22. Pouze nekomerční použití.</li>
   <li><a href="https://www.eea.europa.eu/en/datahub">EEA</a>: validované roční statistiky (AQ_Statistics_WM), pokrytí ≥ 75 %, stanice s ≥ 9 roky dat v 2015–2025.</li>
+  <li>Tepelný ostrov: ECA&amp;D index TN (průměr denních minim za rok), stanice Praha-Klementinum, Praha-Ruzyně, Brandýs nad Labem, Ondřejov.</li>
   <li>Řady za EU a země jsou průměrem buněk 2°×2°, aby husté sítě stanic nepřevážily.</li>
 </ul>
 </main>
@@ -191,7 +198,7 @@ function dotLayer(m, pts, color, r, tipHtml, label) {
   m.svg.attr("aria-label", label);
 }
 
-function lineChart(wrap, { years, series, ref, refLabel, digits = 1, height = 300, labels = true }) {
+function lineChart(wrap, { years, series, ref, refLabel, digits = 1, height = 300, labels = true, zero = true }) {
   wrap.innerHTML = "";
   const W = Math.max(280, wrap.clientWidth), H = W < 600 ? 220 : height;
   const M = { t: 16, r: labels ? (W < 600 ? 74 : 92) : 12, b: 28, l: 36 };
@@ -199,14 +206,14 @@ function lineChart(wrap, { years, series, ref, refLabel, digits = 1, height = 30
   const x = d3.scaleLinear().domain(d3.extent(years)).range([M.l, W - M.r]);
   const all = series.flatMap(s => (s.faint || s.values).filter(v => v != null));
   if (ref != null) all.push(ref);
-  const y = d3.scaleLinear().domain([Math.min(0, d3.min(all)), d3.max(all)]).nice().range([H - M.b, M.t]);
+  const y = d3.scaleLinear().domain([zero ? Math.min(0, d3.min(all)) : d3.min(all), d3.max(all)]).nice().range([H - M.b, M.t]);
   svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line")
     .attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
     .call(d3.axisBottom(x).ticks(W < 600 ? 4 : 8).tickFormat(d3.format("d")).tickSize(0).tickPadding(8)).select(".domain").remove();
   svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
-    .call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(6).tickFormat(v => fmt(v, 0))).select(".domain").remove();
-  svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
+    .call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(6).tickFormat(v => fmt(v, Number.isInteger(v) ? 0 : 1))).select(".domain").remove();
+  if (y.domain()[0] <= 0) svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
   if (ref != null) {
     svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(ref)).attr("y2", y(ref)).attr("stroke", css("--ref")).attr("stroke-dasharray", "4 4");
     svg.append("text").attr("x", W - M.r).attr("y", y(ref) - 5).attr("text-anchor", "end").attr("fill", css("--text-muted")).style("font", "11px system-ui").text(refLabel);
@@ -244,7 +251,7 @@ function scatter(wrap, pts) {
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(6).tickSize(0).tickPadding(6)).select(".domain").remove();
   svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(0).tickPadding(6)).select(".domain").remove();
   svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", M.t).attr("y2", H - M.b).attr("stroke", css("--ref"));
-  svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
+  if (y.domain()[0] <= 0) svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
   svg.append("text").attr("x", W - M.r).attr("y", H - 4).attr("text-anchor", "end").attr("fill", css("--text-muted")).style("font", "11px system-ui").text("letní dny: odchylka od průměru země →");
   svg.append("text").attr("x", M.l + 4).attr("y", M.t + 10).attr("fill", css("--text-muted")).style("font", "11px system-ui").text("↑ dny s vysokým ozonem: odchylka");
   const mx = d3.mean(pts, p => p.su), my = d3.mean(pts, p => p.o3);
@@ -266,7 +273,7 @@ const rolling = (arr, k = 5) => arr.map((_, i) => {
 const med = a => d3.median(a);
 const share = (a, f) => Math.round(a.filter(f).length / a.length * 100);
 
-let heat, air, slope, heatKey = "SU", airKey = "NO2";
+let heat, air, praha, slope, heatKey = "SU", airKey = "NO2";
 
 function renderHeatLine() {
   const S = heat.series.SU;
@@ -328,18 +335,41 @@ function renderText() {
     `Slabě. Spojuje je přízemní ozon, který vzniká v horku. V letech s teplejším létem bylo v dané zemi víc dnů s vysokým ozonem, ale vazba je slabá: <b>r = ${fmt(air.ozone_heat.r, 2)}</b> ` +
     `(~${fmt(slope * 10, 0)} ozonové dny navíc na 10 letních dnů navíc). Ozon celkově neroste, pravděpodobně proto, že ubývá látek, ze kterých vzniká (NOx). ` +
     `<small>Bod = jedna země v jednom roce (2013–2025); od obou hodnot je odečten průměr dané země.</small>`;
+  const t = praha.trend, df = praha.diff, tr = praha.tr;
+  const refs = Object.keys(df);
+  const rng = (f, d) => { const v = refs.map(f); return `${fmt(Math.min(...v), d)}–${fmt(Math.max(...v), d)}`; };
+  const sig = n => Math.abs(df[n].trend_pre[0]) > 2 * df[n].trend_pre[1];
+  const yes = refs.filter(sig), no = refs.filter(n => !sig(n));
+  const DAT = { "Ruzyně": "Ruzyni", "Brandýs n. L.": "Brandýsu", "Ondřejov": "Ondřejovu" };
+  document.getElementById("a4").innerHTML =
+    `Možná, ale data to neprokazují jednoznačně. Noční teploty v centru (Klementinum) rostou o ${fmt(t.Klementinum[0], 2)} °C za desetiletí, za městem o ${rng(n => t[n][0], 2)} °C. ` +
+    `V letech 1951–2004 se rozdíl spolehlivě zvětšoval jen oproti ${yes.map(n => DAT[n]).join(", ")} (${yes.map(n => sign(df[n].trend_pre[0], 2)).join(", ")} °C za desetiletí)` +
+    (no.length ? `; oproti ${no.map(n => DAT[n]).join(" a ")} se neměnil. ` : ". ") +
+    `Po mezeře v datech Klementina (2005–2010) je rozdíl u všech stanic skokově vyšší (o ${rng(n => df[n].step, 2)} °C). Může to být skutečná změna, ale i změna měření; z těchto dat to nejde rozlišit. ` +
+    `Jasný je rozdíl v úrovni: v Klementinu je dnes ${fmt(tr.Klementinum[1], 0)} tropických nocí za léto, za městem ${rng(n => tr[n][1], 0)}.`;
+}
+
+function renderPrague() {
+  const cols = { "Ruzyně": "--s1", "Brandýs n. L.": "--s2", "Ondřejov": "--s3" };
+  const series = Object.entries(praha.diff).map(([n, d]) => ({ name: n, color: css(cols[n]), values: rolling(d.values), faint: d.values,
+    fmt: i => `${d.values[i] == null ? "–" : sign(d.values[i], 2) + " °C"}` }));
+  lineChart(document.getElementById("pragueWrap"), { years: praha.years, series, digits: 2, zero: false });
+  document.getElementById("pragueLegend").innerHTML = Object.entries(cols)
+    .map(([n, c]) => `<span class="key"><i style="background:${css(c)}"></i>Klementinum − ${n}</span>`).join("") +
+    `<span style="color:var(--text-muted)">°C; silná čára = průměr za 5 let</span>`;
 }
 
 function renderAll() {
+  renderPrague();
   renderHeatLine(); renderHeatMap(); renderAirLines(); renderAirMap();
   slope = scatter(document.getElementById("scatterWrap"), air.ozone_heat.points);
 }
 
 Promise.all([
-  d3.json("data/heat.json"), d3.json("data/air.json"),
+  d3.json("data/heat.json"), d3.json("data/air.json"), d3.json("data/praha.json"),
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json"),
-]).then(([h, a, topo]) => {
-  heat = h; air = a;
+]).then(([h, a, pr, topo]) => {
+  heat = h; air = a; praha = pr;
   world = topojson.feature(topo, topo.objects.countries);
   chips(document.getElementById("heatChips"), HEAT, heatKey, k => { heatKey = k; renderHeatMap(); });
   chips(document.getElementById("airChips"), AIR, airKey, k => { airKey = k; renderAirMap(); });
