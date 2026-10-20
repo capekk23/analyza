@@ -33,6 +33,8 @@ python3 scripts/fetch_eea.py /cesta/aq_stats.csv
 # teploty (ECA&D): stáhnout a rozbalit do ecad/SU, ecad/TR, ecad/WSDI, ecad/TXx, ecad/TN
 #   https://knmi-ecad-assets-prd.s3.amazonaws.com/download/millennium/data/ECA_index{SU,TR,WSDI,TXx,TN}.zip
 python3 scripts/process.py /cesta/ecad /cesta/aq_stats.csv data
+# všechna čísla z textu stránky
+python3 scripts/results.py data
 ```
 
 ## Nasazení (Raspberry Pi, nginx)
