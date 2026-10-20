@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teploty a ovzduší EU</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Přibývá horkých dnů, zlepšuje se ovzduší a souvisí to spolu? Stanice ECA&D a EEA v EU.">
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #ffffff; --surface-1: #ffffff; --border: #cccccc; --grid: #e6e6e6;
+  --land: #ececec; --land-stroke: #ffffff; --sea: #ffffff;
+  --text-primary: #000000; --text-secondary: #333333; --text-muted: #666666;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --cool-3: #1c5cab; --cool-2: #5598e7; --cool-1: #b7d3f6; --mid: #e6e6e6;
+  --warm-1: #f6c3b0; --warm-2: #e8805e; --warm-3: #c23a2c; --ref: #666666;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #161616; --surface-1: #161616; --border: #444444; --grid: #2c2c2c;
+    --land: #2c2c2c; --land-stroke: #161616; --sea: #161616;
+    --text-primary: #ffffff; --text-secondary: #cccccc; --text-muted: #999999;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --cool-3: #86b6ef; --cool-2: #3987e5; --cool-1: #184f95; --mid: #3a3a3a;
+    --warm-1: #7a3324; --warm-2: #c4532f; --warm-3: #f08a6c; --ref: #999999;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #161616; --surface-1: #161616; --border: #444444; --grid: #2c2c2c;
+  --land: #2c2c2c; --land-stroke: #161616; --sea: #161616;
+  --text-primary: #ffffff; --text-secondary: #cccccc; --text-muted: #999999;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --cool-3: #86b6ef; --cool-2: #3987e5; --cool-1: #184f95; --mid: #3a3a3a;
+  --warm-1: #7a3324; --warm-2: #c4532f; --warm-3: #f08a6c; --ref: #999999;
+}
+body { margin: 0; background: var(--surface-0); color: var(--text-primary); font: 15px/1.5 system-ui, sans-serif; }
+main { max-width: 900px; margin: 0 auto; padding: 16px 16px 48px; }
+h1 { font-size: 22px; margin: 8px 0; }
+h2 { font-size: 18px; margin: 36px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+p, li { color: var(--text-secondary); }
+p.answer { color: var(--text-primary); }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 8px 0; color: var(--text-secondary); }
+dt { font-weight: 600; color: var(--text-primary); }
+dd { margin: 0; }
+.chips { margin: 8px 0 4px; }
+.chip { font: inherit; font-size: 13px; padding: 2px 8px; margin: 0 4px 4px 0; cursor: pointer; }
+.chip[aria-pressed="true"] { font-weight: 700; }
+.map-wrap { position: relative; }
+svg { display: block; width: 100%; height: auto; }
+.legend { font-size: 13px; color: var(--text-secondary); margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.ramp { display: inline-flex; align-items: center; gap: 6px; }
+.ramp .bar { display: inline-flex; }
+.ramp .bar i { width: 22px; height: 10px; display: block; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 14px; height: 3px; display: inline-block; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); padding: 6px 8px; font-size: 12px; line-height: 1.4; opacity: 0; z-index: 5; min-width: 160px; max-width: 260px; }
+.tip .m { color: var(--text-muted); }
+.tip .row { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.axis text { fill: var(--text-muted); font: 11px system-ui, sans-serif; }
+.grid line { stroke: var(--grid); }
+.dlabel { font: 11px system-ui, sans-serif; fill: var(--text-primary); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two h3 { font-size: 14px; margin: 8px 0 0; }
+@media (max-width: 700px) { .two { grid-template-columns: 1fr; } }
+small { color: var(--text-muted); }
+a { color: var(--s1); }
+</style>
+</head>
+<body>
+<main>
+<h1>Horké dny a kvalita ovzduší v EU</h1>
+<dl>
+  <dt>Letní den</dt><dd>den s maximální teplotou nad 25 °C</dd>
+  <dt>Tropická noc</dt><dd>noc, kdy teplota neklesne pod 20 °C</dd>
+  <dt>NO₂, PM2,5</dt><dd>oxid dusičitý (hlavně doprava) a jemný prach (doprava, topení); roční průměr v µg/m³</dd>
+  <dt>Data</dt><dd>1 713 meteostanic (ECA&amp;D, 1950–2025) a ~1 800 stanic kvality ovzduší (EEA, 2013–2025) v EU</dd>
+</dl>
+
+<h2>1. Přibývá horkých dnů?</h2>
+<p class="answer" id="a1"></p>
+<div class="map-wrap" id="heatLineWrap"></div>
+<div class="legend" id="heatLineLegend"></div>
+<p id="a1map"></p>
+<div class="chips" id="heatChips" role="group" aria-label="Ukazatel"></div>
+<div class="map-wrap" id="heatMapWrap">Načítání…</div>
+<div class="legend" id="heatLegend"></div>
+
+<h2>2. Zlepšuje se vzduch?</h2>
+<p class="answer" id="a2"></p>
+<div class="two">
+  <div><h3>NO₂ (µg/m³)</h3><div class="map-wrap" id="no2Wrap"></div></div>
+  <div><h3>PM2,5 (µg/m³)</h3><div class="map-wrap" id="pm25Wrap"></div></div>
+</div>
+<p><small>Medián stanic měřících 2015–2025. Přerušovaná čára = doporučení WHO.</small></p>
+<p>Změna 2015–2017 → 2023–2025 na jednotlivých stanicích:</p>
+<div class="chips" id="airChips" role="group" aria-label="Látka"></div>
+<div class="map-wrap" id="airMapWrap">Načítání…</div>
+<div class="legend" id="airLegend"></div>
+
+<h2>3. Souvisí to spolu?</h2>
+<p class="answer" id="a3"></p>
+<div class="map-wrap" id="scatterWrap"></div>
+
+<h2>Data</h2>
+<ul>
+  <li><a href="data/zeme.csv" download>zeme.csv</a>: výsledky po zemích (mediány stanic)</li>
+  <li><a href="https://www.ecad.eu/">ECA&amp;D</a>: indexy SU a TR za letní pololetí; stanice s ≥ 25 roky dat v 1961–1990 a ≥ 12 v 2011–2025. Klein Tank et al. (2002), Int. J. Climatol. 22. Pouze nekomerční použití.</li>
+  <li><a href="https://www.eea.europa.eu/en/datahub">EEA</a>: validované roční statistiky (AQ_Statistics_WM), pokrytí ≥ 75 %, stanice s ≥ 9 roky dat v 2015–2025.</li>
+  <li>Řady za EU a země jsou průměrem buněk 2°×2°, aby husté sítě stanic nepřevážily.</li>
+</ul>
+</main>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+(() => {
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = (v, d = 1) => v == null ? "–" : v.toLocaleString("cs-CZ", { minimumFractionDigits: d, maximumFractionDigits: d });
+const sign = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), d);
+const CC = { AT:"Rakousko", BE:"Belgie", BG:"Bulharsko", HR:"Chorvatsko", CY:"Kypr", CZ:"Česko", DK:"Dánsko", EE:"Estonsko", FI:"Finsko", FR:"Francie", DE:"Německo", GR:"Řecko", HU:"Maďarsko", IE:"Irsko", IT:"Itálie", LV:"Lotyšsko", LT:"Litva", LU:"Lucembursko", MT:"Malta", NL:"Nizozemsko", PL:"Polsko", PT:"Portugalsko", RO:"Rumunsko", SK:"Slovensko", SI:"Slovinsko", ES:"Španělsko", SE:"Švédsko" };
+const HEAT = {
+  SU: { label: "Letní dny", unit: "dní", dom: 40 },
+  TR: { label: "Tropické noci", unit: "nocí", dom: 30 },
+};
+const AIR = { NO2: { label: "NO₂", who: 10 }, "PM2.5": { label: "PM2,5", who: 5 } };
+
+const tip = document.getElementById("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.pageX + pad, y = ev.pageY + pad;
+  if (x + w > window.scrollX + innerWidth - 8) x = ev.pageX - w - pad;
+  if (y + h > window.scrollY + innerHeight - 8) y = ev.pageY - h - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.opacity = 0; };
+
+function chips(el, opts, current, onPick) {
+  el.innerHTML = "";
+  for (const [k, o] of Object.entries(opts)) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.textContent = o.label;
+    b.setAttribute("aria-pressed", k === current);
+    b.onclick = () => { el.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); onPick(k); };
+    el.appendChild(b);
+  }
+}
+
+function divergingScale(max) {
+  const cols = ["--cool-3", "--cool-2", "--cool-1", "--mid", "--warm-1", "--warm-2", "--warm-3"].map(css);
+  const t = [-max * 0.6, -max * 0.3, -max * 0.08, max * 0.08, max * 0.3, max * 0.6];
+  const s = d3.scaleThreshold().domain(t).range(cols);
+  s.ticks = t; return s;
+}
+function rampLegend(el, scale, fmtFn, note) {
+  el.innerHTML = `<span class="ramp"><span class="bar">${scale.range().map(c => `<i style="background:${c}"></i>`).join("")}</span></span>
+    <span>${scale.ticks.map(fmtFn).join(" · ")}</span><span style="color:var(--text-muted)">${note}</span>`;
+}
+
+let world;
+function makeMap(wrap) {
+  const W = 960, H = 760;
+  wrap.innerHTML = "";
+  const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img");
+  const proj = d3.geoConicConformal().parallels([35, 65]).rotate([-12, 0])
+    .fitExtent([[6, 6], [W - 6, H - 6]], { type: "MultiPoint", coordinates: [[-10, 35], [32, 35], [-8, 70.5], [33, 70.5], [12, 34], [26, 71]] });
+  svg.append("rect").attr("width", W).attr("height", H).attr("fill", css("--sea"));
+  svg.append("path").datum(world).attr("d", d3.geoPath(proj)).attr("fill", css("--land")).attr("stroke", css("--land-stroke")).attr("stroke-width", 0.8);
+  return { svg, g: svg.append("g"), proj };
+}
+
+function dotLayer(m, pts, color, r, tipHtml, label) {
+  const xy = pts.map(p => m.proj([p.lon, p.lat]));
+  const order = d3.range(pts.length).sort((a, b) => Math.abs(pts[a].v) - Math.abs(pts[b].v));
+  m.g.selectAll("circle").data(order).join("circle")
+    .attr("cx", i => xy[i][0]).attr("cy", i => xy[i][1]).attr("r", r)
+    .attr("fill", i => color(pts[i].v)).attr("stroke", css("--surface-1")).attr("stroke-width", 1);
+  const ring = m.svg.append("circle").attr("r", r + 4).attr("fill", "none").attr("stroke", css("--text-primary")).attr("stroke-width", 2).style("opacity", 0);
+  const del = d3.Delaunay.from(xy);
+  m.svg.on("pointermove", ev => {
+    const [mx, my] = d3.pointer(ev);
+    const i = del.find(mx, my);
+    if (i == null || Math.hypot(xy[i][0] - mx, xy[i][1] - my) > 18) { hideTip(); ring.style("opacity", 0); return; }
+    ring.attr("cx", xy[i][0]).attr("cy", xy[i][1]).style("opacity", 1);
+    showTip(tipHtml(pts[i]), ev);
+  }).on("pointerleave", () => { hideTip(); ring.style("opacity", 0); });
+  m.svg.attr("aria-label", label);
+}
+
+function lineChart(wrap, { years, series, ref, refLabel, digits = 1, height = 300, labels = true }) {
+  wrap.innerHTML = "";
+  const W = Math.max(280, wrap.clientWidth), H = W < 600 ? 220 : height;
+  const M = { t: 16, r: labels ? (W < 600 ? 74 : 92) : 12, b: 28, l: 36 };
+  const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+  const x = d3.scaleLinear().domain(d3.extent(years)).range([M.l, W - M.r]);
+  const all = series.flatMap(s => (s.faint || s.values).filter(v => v != null));
+  if (ref != null) all.push(ref);
+  const y = d3.scaleLinear().domain([Math.min(0, d3.min(all)), d3.max(all)]).nice().range([H - M.b, M.t]);
+  svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line")
+    .attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+    .call(d3.axisBottom(x).ticks(W < 600 ? 4 : 8).tickFormat(d3.format("d")).tickSize(0).tickPadding(8)).select(".domain").remove();
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+    .call(d3.axisLeft(y).ticks(5).tickSize(0).tickPadding(6).tickFormat(v => fmt(v, 0))).select(".domain").remove();
+  svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
+  if (ref != null) {
+    svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(ref)).attr("y2", y(ref)).attr("stroke", css("--ref")).attr("stroke-dasharray", "4 4");
+    svg.append("text").attr("x", W - M.r).attr("y", y(ref) - 5).attr("text-anchor", "end").attr("fill", css("--text-muted")).style("font", "11px system-ui").text(refLabel);
+  }
+  const line = d3.line().defined(v => v != null).x((v, i) => x(years[i])).y(v => y(v)).curve(d3.curveMonotoneX);
+  for (const s of series) {
+    if (s.faint) svg.append("path").attr("d", line(s.faint)).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", 1).attr("opacity", .25);
+    svg.append("path").attr("d", line(s.values)).attr("fill", "none").attr("stroke", s.color).attr("stroke-width", 2.25);
+  }
+  if (labels) {
+    const ends = series.map(s => { let i = s.values.length - 1; while (i > 0 && s.values[i] == null) i--; return { s, y: y(s.values[i]) }; }).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+    for (const e of ends) svg.append("text").attr("class", "dlabel").attr("x", W - M.r + 6).attr("y", e.y + 4).text(e.s.name);
+  }
+  const cross = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", css("--text-muted")).style("opacity", 0);
+  const dots = series.map(s => svg.append("circle").attr("r", 4.5).attr("fill", s.color).attr("stroke", css("--surface-1")).attr("stroke-width", 2).style("opacity", 0));
+  svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).attr("fill", "transparent")
+    .on("pointermove", ev => {
+      const yr = Math.round(x.invert(d3.pointer(ev)[0])); const i = years.indexOf(yr); if (i < 0) return;
+      cross.attr("x1", x(yr)).attr("x2", x(yr)).style("opacity", 1);
+      series.forEach((s, k) => { const v = s.values[i]; dots[k].style("opacity", v == null ? 0 : 1).attr("cx", x(yr)).attr("cy", v == null ? 0 : y(v)); });
+      showTip(`<b>${yr}</b>` + series.map(s => `<div class="row"><span>${s.name}</span><span>${s.fmt ? s.fmt(i) : fmt(s.values[i], digits)}</span></div>`).join(""), ev);
+    })
+    .on("pointerleave", () => { hideTip(); cross.style("opacity", 0); dots.forEach(d => d.style("opacity", 0)); });
+}
+
+function scatter(wrap, pts) {
+  wrap.innerHTML = "";
+  const W = Math.max(280, wrap.clientWidth), H = W < 600 ? 280 : 340, M = { t: 12, r: 12, b: 40, l: 36 };
+  const svg = d3.select(wrap).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+  const ex = d3.max(pts, p => Math.abs(p.su)), ey = d3.max(pts, p => Math.abs(p.o3));
+  const x = d3.scaleLinear().domain([-ex, ex]).nice().range([M.l, W - M.r]);
+  const y = d3.scaleLinear().domain([-ey, ey]).nice().range([H - M.b, M.t]);
+  svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(6)).join("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(6).tickSize(0).tickPadding(6)).select(".domain").remove();
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(6).tickSize(0).tickPadding(6)).select(".domain").remove();
+  svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", M.t).attr("y2", H - M.b).attr("stroke", css("--ref"));
+  svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", css("--ref"));
+  svg.append("text").attr("x", W - M.r).attr("y", H - 4).attr("text-anchor", "end").attr("fill", css("--text-muted")).style("font", "11px system-ui").text("letní dny: odchylka od průměru země →");
+  svg.append("text").attr("x", M.l + 4).attr("y", M.t + 10).attr("fill", css("--text-muted")).style("font", "11px system-ui").text("↑ dny s vysokým ozonem: odchylka");
+  const mx = d3.mean(pts, p => p.su), my = d3.mean(pts, p => p.o3);
+  const b = d3.sum(pts, p => (p.su - mx) * (p.o3 - my)) / d3.sum(pts, p => (p.su - mx) ** 2);
+  const [x0, x1] = x.domain();
+  svg.selectAll("circle").data(pts).join("circle").attr("cx", p => x(p.su)).attr("cy", p => y(p.o3)).attr("r", 4)
+    .attr("fill", css("--s1")).attr("fill-opacity", .5).attr("stroke", css("--surface-1"))
+    .on("pointermove", (ev, p) => showTip(`<b>${CC[p.cc] || p.cc} ${p.y}</b><div class="row"><span>letní dny</span><span>${sign(p.su)}</span></div><div class="row"><span>ozonové dny</span><span>${sign(p.o3)}</span></div>`, ev))
+    .on("pointerleave", hideTip);
+  svg.append("line").attr("x1", x(x0)).attr("x2", x(x1)).attr("y1", y(my + b * (x0 - mx))).attr("y2", y(my + b * (x1 - mx)))
+    .attr("stroke", css("--s2")).attr("stroke-width", 2);
+  return b;
+}
+
+const rolling = (arr, k = 5) => arr.map((_, i) => {
+  const w = arr.slice(Math.max(0, i - k + 1), i + 1).filter(v => v != null);
+  return w.length >= 3 ? d3.mean(w) : null;
+});
+const med = a => d3.median(a);
+const share = (a, f) => Math.round(a.filter(f).length / a.length * 100);
+
+let heat, air, slope, heatKey = "SU", airKey = "NO2";
+
+function renderHeatLine() {
+  const S = heat.series.SU;
+  const mk = (k, name, c) => ({ name, color: css(c), values: rolling(S[k]), faint: S[k],
+    fmt: i => `${sign(S[k][i], 0)} <span class="m">(5 let ${sign(rolling(S[k])[i], 1)})</span>` });
+  lineChart(document.getElementById("heatLineWrap"), { years: heat.years, series: [mk("EU", "EU", "--s1"), mk("ES", "Španělsko", "--s2"), mk("CZ", "Česko", "--s3")] });
+  document.getElementById("heatLineLegend").innerHTML = [["EU", "--s1"], ["Španělsko", "--s2"], ["Česko", "--s3"]]
+    .map(([n, c]) => `<span class="key"><i style="background:${css(c)}"></i>${n}</span>`).join("") +
+    `<span style="color:var(--text-muted)">letní dny oproti průměru 1961–1990; silná čára = průměr za 5 let</span>`;
+}
+
+function renderHeatMap() {
+  const cfg = HEAT[heatKey];
+  const pts = heat.stations.filter(s => s[heatKey]).map(s => ({ ...s, v: s[heatKey][1] - s[heatKey][0], b: s[heatKey][0], r: s[heatKey][1] }));
+  const color = divergingScale(cfg.dom);
+  const m = makeMap(document.getElementById("heatMapWrap"));
+  dotLayer(m, pts, color, 4, p => `<b>${p.name}</b> <span class="m">${CC[p.cc]}</span>
+    <div class="row"><span>1961–1990</span><span>${fmt(p.b, 0)} ${cfg.unit}</span></div>
+    <div class="row"><span>2011–2025</span><span>${fmt(p.r, 0)} ${cfg.unit}</span></div>
+    <div class="row"><b>změna</b><b>${sign(p.v, 0)}</b></div>`, `${cfg.label}: změna na ${pts.length} stanicích`);
+  rampLegend(document.getElementById("heatLegend"), color, v => sign(v, 0), `${cfg.unit} za léto, 2011–2025 oproti 1961–1990`);
+}
+
+function renderAirLines() {
+  for (const [k, id] of [["NO2", "no2Wrap"], ["PM2.5", "pm25Wrap"]]) {
+    lineChart(document.getElementById(id), { years: air.years, digits: 0, height: 220, labels: false, ref: AIR[k].who, refLabel: `WHO ${AIR[k].who}`,
+      series: [{ name: AIR[k].label, color: css("--s1"), values: air.series[k].all }] });
+  }
+}
+
+function renderAirMap() {
+  const cfg = AIR[airKey];
+  const pts = air.stations.filter(s => s[airKey] && s[airKey][0] > 0).map(s => ({ ...s, v: (s[airKey][1] - s[airKey][0]) / s[airKey][0] * 100, b: s[airKey][0], r: s[airKey][1] }));
+  const color = divergingScale(60);
+  const m = makeMap(document.getElementById("airMapWrap"));
+  dotLayer(m, pts, color, 3.4, p => `<b>${p.name}</b> <span class="m">${CC[p.cc] || p.cc}</span>
+    <div class="row"><span>2015–2017</span><span>${fmt(p.b)} µg/m³</span></div>
+    <div class="row"><span>2023–2025</span><span>${fmt(p.r)} µg/m³</span></div>
+    <div class="row"><b>změna</b><b>${sign(p.v, 0)} %</b></div>`, `${cfg.label}: změna na ${pts.length} stanicích`);
+  rampLegend(document.getElementById("airLegend"), color, v => sign(v, 0) + " %", `modrá = pokles, n = ${pts.length}`);
+}
+
+function renderText() {
+  const d = k => heat.stations.filter(s => s[k]).map(s => s[k][1] - s[k][0]);
+  const pct = k => air.stations.filter(s => s[k] && s[k][0] > 0).map(s => (s[k][1] - s[k][0]) / s[k][0] * 100);
+  const su = d("SU");
+  const cz = heat.countries.find(c => c.cc === "CZ"), es = heat.countries.find(c => c.cc === "ES");
+  const no2 = pct("NO2"), pm = pct("PM2.5");
+  const last = k => air.series[k].all.at(-1);
+  document.getElementById("a1").innerHTML =
+    `Ano. Letních dnů je dnes (2011–2025) v mediánu o <b>${fmt(med(su), 0)} víc</b> za léto než v letech 1961–1990; přibylo jich na ${share(su, v => v > 0)} % stanic. ` +
+    `Česko: ${fmt(cz.SU[0], 0)} → ${fmt(cz.SU[1], 0)} dní, Španělsko: ${fmt(es.SU[0], 0)} → ${fmt(es.SU[1], 0)} dní. Nárůst začíná kolem roku 1990.`;
+  document.getElementById("a1map").innerHTML =
+    `Kde: letní dny přibývají v celé EU, nejvíc ve střední a jižní Evropě. Tropické noci přibývají hlavně u Středozemního moře (Španělsko ${fmt(es.TR[0], 0)} → ${fmt(es.TR[1], 0)} za léto); v Česku jsou pořád vzácné (${fmt(cz.TR[1], 1)}).`;
+  document.getElementById("a2").innerHTML =
+    `Ano. Mezi 2015–2017 a 2023–2025 klesl NO₂ v mediánu o <b>${fmt(-med(no2), 0)} %</b> (pokles na ${share(no2, v => v < 0)} % stanic) a PM2,5 o <b>${fmt(-med(pm), 0)} %</b> (${share(pm, v => v < 0)} % stanic). ` +
+    `Pořád je to ale nad doporučením WHO: NO₂ ${fmt(last("NO2"), 0)} µg/m³ (WHO 10), PM2,5 ${fmt(last("PM2.5"), 0)} µg/m³ (WHO 5).`;
+  document.getElementById("a3").innerHTML =
+    `Slabě. Spojuje je přízemní ozon, který vzniká v horku. V letech s teplejším létem bylo v dané zemi víc dnů s vysokým ozonem, ale vazba je slabá: <b>r = ${fmt(air.ozone_heat.r, 2)}</b> ` +
+    `(~${fmt(slope * 10, 0)} ozonové dny navíc na 10 letních dnů navíc). Ozon celkově neroste, pravděpodobně proto, že ubývá látek, ze kterých vzniká (NOx). ` +
+    `<small>Bod = jedna země v jednom roce (2013–2025); od obou hodnot je odečten průměr dané země.</small>`;
+}
+
+function renderAll() {
+  renderHeatLine(); renderHeatMap(); renderAirLines(); renderAirMap();
+  slope = scatter(document.getElementById("scatterWrap"), air.ozone_heat.points);
+}
+
+Promise.all([
+  d3.json("data/heat.json"), d3.json("data/air.json"),
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json"),
+]).then(([h, a, topo]) => {
+  heat = h; air = a;
+  world = topojson.feature(topo, topo.objects.countries);
+  chips(document.getElementById("heatChips"), HEAT, heatKey, k => { heatKey = k; renderHeatMap(); });
+  chips(document.getElementById("airChips"), AIR, airKey, k => { airKey = k; renderAirMap(); });
+  renderAll(); renderText();
+}).catch(err => { document.getElementById("heatMapWrap").textContent = "Chyba načítání dat: " + err.message; });
+
+let lastW = innerWidth, rt;
+addEventListener("resize", () => { if (Math.abs(innerWidth - lastW) < 40 || !heat) return; lastW = innerWidth; clearTimeout(rt); rt = setTimeout(renderAll, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (heat) renderAll(); });
+})();
+</script>
+</body>
+</html>
